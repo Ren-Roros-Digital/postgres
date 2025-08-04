@@ -30,8 +30,13 @@
       packages = (
         {
           build-test-ami = pkgs.callPackage ./build-test-ami.nix { };
+          ansible-test = pkgs.callPackage ./ansible-test.nix { inherit self; };
           cleanup-ami = pkgs.callPackage ./cleanup-ami.nix { };
           dbmate-tool = pkgs.callPackage ./dbmate-tool.nix { inherit (self.supabase) defaults; };
+          docker-ansible-test = pkgs.callPackage ./docker-ansible-test.nix {
+            inherit (self'.packages) docker-image-ubuntu;
+          };
+          docker-image-ubuntu = pkgs.callPackage ./docker-ubuntu.nix { };
           docs = pkgs.callPackage ./docs.nix { };
           supabase-groonga = pkgs.callPackage ./groonga { };
           http-mock-server = pkgs.callPackage ./http-mock-server.nix { };
