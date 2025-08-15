@@ -108,6 +108,8 @@
 - name: Grant pg_hba and pgbouncer grp perm for adminapi updates
   shell: |
      chmod g+w /etc/postgresql/pg_hba.conf
+     chmod g+w /etc/postgresql/pg_hba_users_public.conf
+     chmod g+w /etc/postgresql/pg_hba_public.conf
      chmod g+w /etc/pgbouncer-custom/ssl-config.ini
 
 # Add fail2ban filter

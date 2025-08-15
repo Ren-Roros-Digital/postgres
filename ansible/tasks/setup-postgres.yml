@@ -147,6 +147,22 @@
     group: postgres
   when: debpkg_mode or nixpkg_mode
 
+# Add pg_hba_public.conf
+- name: import pg_hba_public.conf
+  template:
+    src: files/postgresql_config/pg_hba_public.conf.j2
+    dest: /etc/postgresql/pg_hba_public.conf
+    group: postgres
+  when: debpkg_mode or nixpkg_mode
+
+# Add pg_hba_users_public.conf
+- name: import pg_hba_users_public.conf
+  template:
+    src: files/postgresql_config/pg_hba_users_public.conf.j2
+    dest: /etc/postgresql/pg_hba_users_public.conf
+    group: postgres
+  when: debpkg_mode or nixpkg_mode
+
 # Add pg_ident.conf
 - name: import pg_ident.conf
   template:
