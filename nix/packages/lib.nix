@@ -14,17 +14,9 @@
       pkgs,
       name,
       extraSubstitutions ? { },
+      version,
     }:
     let
-      pgVersion =
-        if name == psql_15 then
-          "15"
-        else if name == psql_17 then
-          "17"
-        else
-          "unknown";
-      version = builtins.trace "pgpkg.version is: ${pgVersion} from ${name} " pgVersion;
-
       paths =
         {
           migrationsDir = builtins.path {
@@ -73,7 +65,7 @@
           };
         }
         // (
-          if pgVersion == "15" || version == "15" then
+          if version == "15" then
             {
               pgHbaConfigFile = builtins.path {
                 name = "pg_hba.conf";
