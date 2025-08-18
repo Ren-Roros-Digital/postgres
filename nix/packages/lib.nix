@@ -15,79 +15,80 @@
       extraSubstitutions ? { },
     }:
     let
-      paths = {
-        migrationsDir = builtins.path {
-          name = "migrations";
-          path = ../../migrations/db;
-        };
-        postgresqlSchemaSql = builtins.path {
-          name = "postgresql-schema";
-          path = ../tools/postgresql_schema.sql;
-        };
-        pgbouncerAuthSchemaSql = builtins.path {
-          name = "pgbouncer-auth-schema";
-          path = ../../ansible/files/pgbouncer_config/pgbouncer_auth_schema.sql;
-        };
-        statExtensionSql = builtins.path {
-          name = "stat-extension";
-          path = ../../ansible/files/stat_extension.sql;
-        };
-        pgconfigFile = builtins.path {
-          name = "postgresql.conf";
-          path = ../../ansible/files/postgresql_config/postgresql.conf.j2;
-        };
-        supautilsConfigFile = builtins.path {
-          name = "supautils.conf";
-          path = ../../ansible/files/postgresql_config/supautils.conf.j2;
-        };
-        loggingConfigFile = builtins.path {
-          name = "logging.conf";
-          path = ../../ansible/files/postgresql_config/postgresql-csvlog.conf;
-        };
-        readReplicaConfigFile = builtins.path {
-          name = "readreplica.conf";
-          path = ../../ansible/files/postgresql_config/custom_read_replica.conf.j2;
-        };
-        pgHbaConfigFile =
-          if pkgs == psql_15 then
-            builtins.path {
-              name = "pg_hba.conf";
-              path = ../../ansible/files/postgresql_config/pg_hba.conf_15.j2;
+      inherit (lib) versions getVersion;
+      pgVersion = versions.major (getVersion postgresPkg);
+
+      paths =
+        {
+          migrationsDir = builtins.path {
+            name = "migrations";
+            path = ../../migrations/db;
+          };
+          postgresqlSchemaSql = builtins.path {
+            name = "postgresql-schema";
+            path = ../tools/postgresql_schema.sql;
+          };
+          pgbouncerAuthSchemaSql = builtins.path {
+            name = "pgbouncer-auth-schema";
+            path = ../../ansible/files/pgbouncer_config/pgbouncer_auth_schema.sql;
+          };
+          statExtensionSql = builtins.path {
+            name = "stat-extension";
+            path = ../../ansible/files/stat_extension.sql;
+          };
+          pgconfigFile = builtins.path {
+            name = "postgresql.conf";
+            path = ../../ansible/files/postgresql_config/postgresql.conf.j2;
+          };
+          supautilsConfigFile = builtins.path {
+            name = "supautils.conf";
+            path = ../../ansible/files/postgresql_config/supautils.conf.j2;
+          };
+          loggingConfigFile = builtins.path {
+            name = "logging.conf";
+            path = ../../ansible/files/postgresql_config/postgresql-csvlog.conf;
+          };
+          readReplicaConfigFile = builtins.path {
+            name = "readreplica.conf";
+            path = ../../ansible/files/postgresql_config/custom_read_replica.conf.j2;
+          };
+          pgIdentConfigFile = builtins.path {
+            name = "pg_ident.conf";
+            path = ../../ansible/files/postgresql_config/pg_ident.conf.j2;
+          };
+          postgresqlExtensionCustomScriptsPath = builtins.path {
+            name = "extension-custom-scripts";
+            path = ../../ansible/files/postgresql_extension_custom_scripts;
+          };
+          getkeyScript = builtins.path {
+            name = "pgsodium_getkey.sh";
+            path = ../tests/util/pgsodium_getkey.sh;
+          };
+        }
+        // (
+          if pgVersion == "15" then
+            {
+              pgHbaConfigFile = builtins.path {
+                name = "pg_hba.conf";
+                path = ../../ansible/files/postgresql_config/pg_hba.conf_15.j2;
+              };
             }
           else
-            builtins.path {
-              name = "pg_hba.conf";
-              path = ../../ansible/files/postgresql_config/pg_hba.conf.j2;
-            };
-        pgHbaUsersPublicConfigFile =
-          if pkgs != psql_15 then
-            builtins.path {
-              name = "pg_hba_users_public.conf";
-              path = ../../ansible/files/postgresql_config/pg_hba_users_public.conf.j2;
+            {
+              pgHbaConfigFile = builtins.path {
+                name = "pg_hba.conf";
+                path = ../../ansible/files/postgresql_config/pg_hba.conf.j2;
+              };
+              pgHbaUsersPublicConfigFile = builtins.path {
+                name = "pg_hba_users_public.conf";
+                path = ../../ansible/files/postgresql_config/pg_hba_users_public.conf.j2;
+              };
+              pgHbaPublicConfigFile = builtins.path {
+                name = "pg_hba_public.conf";
+                path = ../../ansible/files/postgresql_config/pg_hba_public.conf.j2;
+              };
             }
-          else
-            null;
-        pgHbaPublicConfigFile =
-          if pkgs != psql_15 then
-            builtins.path {
-              name = "pg_hba_public.conf";
-              path = ../../ansible/files/postgresql_config/pg_hba_public.conf.j2;
-            }
-          else
-            null;
-        pgIdentConfigFile = builtins.path {
-          name = "pg_ident.conf";
-          path = ../../ansible/files/postgresql_config/pg_ident.conf.j2;
-        };
-        postgresqlExtensionCustomScriptsPath = builtins.path {
-          name = "extension-custom-scripts";
-          path = ../../ansible/files/postgresql_extension_custom_scripts;
-        };
-        getkeyScript = builtins.path {
-          name = "pgsodium_getkey.sh";
-          path = ../tests/util/pgsodium_getkey.sh;
-        };
-      };
+        );
 
       localeArchive =
         if pkgs.stdenv.isDarwin then
@@ -130,46 +131,52 @@
           ;
       }
       ''
-        mkdir -p $out/bin $out/etc/postgresql-custom $out/etc/postgresql $out/extension-custom-scripts
+         mkdir -p $out/bin $out/etc/postgresql-custom $out/etc/postgresql $out/extension-custom-scripts
 
-        # Copy config files with error handling
-        cp ${paths.supautilsConfigFile} $out/etc/postgresql-custom/supautils.conf || { echo "Failed to copy supautils.conf"; exit 1; }
-        cp ${paths.pgconfigFile} $out/etc/postgresql/postgresql.conf || { echo "Failed to copy postgresql.conf"; exit 1; }
-        cp ${paths.loggingConfigFile} $out/etc/postgresql-custom/logging.conf || { echo "Failed to copy logging.conf"; exit 1; }
-        cp ${paths.readReplicaConfigFile} $out/etc/postgresql-custom/read-replica.conf || { echo "Failed to copy read-replica.conf"; exit 1; }
-        cp ${paths.pgHbaConfigFile} $out/etc/postgresql/pg_hba.conf || { echo "Failed to copy pg_hba.conf"; exit 1; }
+         # Copy config files with error handling
+         cp ${paths.supautilsConfigFile} $out/etc/postgresql-custom/supautils.conf || { echo "Failed to copy supautils.conf"; exit 1; }
+         cp ${paths.pgconfigFile} $out/etc/postgresql/postgresql.conf || { echo "Failed to copy postgresql.conf"; exit 1; }
+         cp ${paths.loggingConfigFile} $out/etc/postgresql-custom/logging.conf || { echo "Failed to copy logging.conf"; exit 1; }
+         cp ${paths.readReplicaConfigFile} $out/etc/postgresql-custom/read-replica.conf || { echo "Failed to copy read-replica.conf"; exit 1; }
+         cp ${paths.pgHbaConfigFile} $out/etc/postgresql/pg_hba.conf || { echo "Failed to copy pg_hba.conf"; exit 1; }
 
-        # these shouldn't exist on psql_15
-        if [ -n "${toString paths.pgHbaUsersPublicConfigFile}" ]; then
+         # these shouldn't exist on psql_15
+        ${lib.optionalString (paths ? pgHbaUsersPublicConfigFile) ''
           cp ${paths.pgHbaUsersPublicConfigFile} $out/etc/postgresql/pg_hba_users_public.conf || { echo "Failed to copy pg_hba_users_public.conf"; exit 1; }
-        fi
-        if [ -n "${toString paths.pgHbaPublicConfigFile}" ]; then
-          cp ${paths.pgHbaPublicConfigFile} $out/etc/postgresql/pg_hba_public.conf || { echo "Failed to copy pg_hba_public.conf"; exit 1; }
-        fi
-        cp ${paths.pgIdentConfigFile} $out/etc/postgresql/pg_ident.conf || { echo "Failed to copy pg_ident.conf"; exit 1; }
-        cp -r ${paths.postgresqlExtensionCustomScriptsPath}/* $out/extension-custom-scripts/ || { echo "Failed to copy custom scripts"; exit 1; }
+        ''}
+         ${
+           lib.optionalString (paths ? pgHbaPublicConfigFile) ''
+             cp ${paths.pgHbaPublicConfigFile} $out/etc/postgresql/pg_hba_public.conf || { echo "Failed to copy pg_hba_public.conf"; exit 1; }
+           ''
+         }
+         cp ${paths.pgIdentConfigFile} $out/etc/postgresql/pg_ident.conf || { echo "Failed to copy pg_ident.conf"; exit 1; }
+         cp -r ${paths.postgresqlExtensionCustomScriptsPath}/* $out/extension-custom-scripts/ || { echo "Failed to copy custom scripts"; exit 1; }
 
-        echo "Copy operation completed"
-        chmod 644 $out/etc/postgresql-custom/supautils.conf
-        chmod 644 $out/etc/postgresql/postgresql.conf
-        chmod 644 $out/etc/postgresql-custom/logging.conf
-        chmod 644 $out/etc/postgresql/pg_hba.conf
+         echo "Copy operation completed"
+         chmod 644 $out/etc/postgresql-custom/supautils.conf
+         chmod 644 $out/etc/postgresql/postgresql.conf
+         chmod 644 $out/etc/postgresql-custom/logging.conf
+         chmod 644 $out/etc/postgresql/pg_hba.conf
 
-        if [ -n "${toString paths.pgHbaUsersPublicConfigFile}" ]; then
-          chmod 644 $out/etc/postgresql/pg_hba_users_public.conf
-        fi
-        if [ -n "${toString paths.pgHbaPublicConfigFile}" ]; then
-          chmod 644 $out/etc/postgresql/pg_hba_public.conf
-        fi
+         ${
+           lib.optionalString (paths ? pgHbaUsersPublicConfigFile) ''
+             chmod 644 $out/etc/postgresql/pg_hba_users_public.conf
+           ''
+         }
+         ${
+           lib.optionalString (paths ? pgHbaPublicConfigFile) ''
+             chmod 644 $out/etc/postgresql/pg_hba_public.conf
+           ''
+         }
 
-        substitute ${../tools/run-server.sh.in} $out/bin/start-postgres-server \
-          ${
-            builtins.concatStringsSep " " (
-              builtins.attrValues (
-                builtins.mapAttrs (name: value: "--subst-var-by '${name}' '${value}'") substitutions
-              )
-            )
-          }
-        chmod +x $out/bin/start-postgres-server
+         substitute ${../tools/run-server.sh.in} $out/bin/start-postgres-server \
+           ${
+             builtins.concatStringsSep " " (
+               builtins.attrValues (
+                 builtins.mapAttrs (name: value: "--subst-var-by '${name}' '${value}'") substitutions
+               )
+             )
+           }
+         chmod +x $out/bin/start-postgres-server
       '';
 }
