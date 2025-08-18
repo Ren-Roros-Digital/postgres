@@ -48,18 +48,33 @@
           name = "readreplica.conf";
           path = ../../ansible/files/postgresql_config/custom_read_replica.conf.j2;
         };
-        pgHbaConfigFile = builtins.path {
-          name = "pg_hba.conf";
-          path = ../../ansible/files/postgresql_config/pg_hba.conf.j2;
-        };
-        pgHbaUsersPublicConfigFile = builtins.path {
-          name = "pg_hba_users_public.conf";
-          path = ../../ansible/files/postgresql_config/pg_hba_users_public.conf.j2;
-        };
-        pgHbaPublicConfigFile = builtins.path {
-          name = "pg_hba_public.conf";
-          path = ../../ansible/files/postgresql_config/pg_hba_public.conf.j2;
-        };
+        pgHbaConfigFile =
+          if pkgs == psql_15 then
+            builtins.path {
+              name = "pg_hba.conf";
+              path = ../../ansible/files/postgresql_config/pg_hba.conf_15.j2;
+            }
+          else
+            builtins.path {
+              name = "pg_hba.conf";
+              path = ../../ansible/files/postgresql_config/pg_hba.conf.j2;
+            };
+        pgHbaUsersPublicConfigFile =
+          if pkgs != psql_15 then
+            builtins.path {
+              name = "pg_hba_users_public.conf";
+              path = ../../ansible/files/postgresql_config/pg_hba_users_public.conf.j2;
+            }
+          else
+            null;
+        pgHbaPublicConfigFile =
+          if pkgs != psql_15 then
+            builtins.path {
+              name = "pg_hba_public.conf";
+              path = ../../ansible/files/postgresql_config/pg_hba_public.conf.j2;
+            }
+          else
+            null;
         pgIdentConfigFile = builtins.path {
           name = "pg_ident.conf";
           path = ../../ansible/files/postgresql_config/pg_ident.conf.j2;
@@ -123,8 +138,14 @@
         cp ${paths.loggingConfigFile} $out/etc/postgresql-custom/logging.conf || { echo "Failed to copy logging.conf"; exit 1; }
         cp ${paths.readReplicaConfigFile} $out/etc/postgresql-custom/read-replica.conf || { echo "Failed to copy read-replica.conf"; exit 1; }
         cp ${paths.pgHbaConfigFile} $out/etc/postgresql/pg_hba.conf || { echo "Failed to copy pg_hba.conf"; exit 1; }
-        cp ${paths.pgHbaUsersPublicConfigFile} $out/etc/postgresql/pg_hba_users_public.conf || { echo "Failed to copy pg_hba_users_public.conf"; exit 1; }
-        cp ${paths.pgHbaPublicConfigFile} $out/etc/postgresql/pg_hba_public.conf || { echo "Failed to copy pg_hba_public.conf"; exit 1; }
+
+        # these shouldn't exist on psql_15
+        if [ -n "${toString paths.pgHbaUsersPublicConfigFile}" ]; then
+          cp ${paths.pgHbaUsersPublicConfigFile} $out/etc/postgresql/pg_hba_users_public.conf || { echo "Failed to copy pg_hba_users_public.conf"; exit 1; }
+        fi
+        if [ -n "${toString paths.pgHbaPublicConfigFile}" ]; then
+          cp ${paths.pgHbaPublicConfigFile} $out/etc/postgresql/pg_hba_public.conf || { echo "Failed to copy pg_hba_public.conf"; exit 1; }
+        fi
         cp ${paths.pgIdentConfigFile} $out/etc/postgresql/pg_ident.conf || { echo "Failed to copy pg_ident.conf"; exit 1; }
         cp -r ${paths.postgresqlExtensionCustomScriptsPath}/* $out/extension-custom-scripts/ || { echo "Failed to copy custom scripts"; exit 1; }
 
@@ -133,8 +154,13 @@
         chmod 644 $out/etc/postgresql/postgresql.conf
         chmod 644 $out/etc/postgresql-custom/logging.conf
         chmod 644 $out/etc/postgresql/pg_hba.conf
-        chmod 644 $out/etc/postgresql/pg_hba_users_public.conf
-        chmod 644 $out/etc/postgresql/pg_hba_public.conf
+
+        if [ -n "${toString paths.pgHbaUsersPublicConfigFile}" ]; then
+          chmod 644 $out/etc/postgresql/pg_hba_users_public.conf
+        fi
+        if [ -n "${toString paths.pgHbaPublicConfigFile}" ]; then
+          chmod 644 $out/etc/postgresql/pg_hba_public.conf
+        fi
 
         substitute ${../tools/run-server.sh.in} $out/bin/start-postgres-server \
           ${
