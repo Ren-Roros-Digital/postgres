@@ -1,9 +1,11 @@
 { self, inputs, ... }:
 let
   mkModules = system: [
+    self.systemModules.logrotate
     ({
       services.nginx.enable = true;
       nixpkgs.hostPlatform = system;
+      supabase.services.logrotate.enable = true;
     })
   ];
 

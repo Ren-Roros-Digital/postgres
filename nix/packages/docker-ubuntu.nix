@@ -14,6 +14,10 @@ let
     in
     runCommand "ubuntu-cloudimg" { nativeBuildInputs = [ xz ]; } ''
       mkdir -p $out
+      # FIXME: remove (among other things) builtin logrotate to avoid conflicts with the one set-up by system-manager
+      #   --exclude='etc/systemd/system/timers.target.wants/logrotate.timer' \
+      #   --exclude='usr/lib/systemd/system/logrotate.service' \
+      #   --exclude='usr/lib/systemd/system/logrotate.timer' \
       tar --exclude='dev/*' \
           --exclude='etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service' \
           --exclude='etc/systemd/system/multi-user.target.wants/systemd-resolved.service' \

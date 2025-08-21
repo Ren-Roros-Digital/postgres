@@ -41,18 +41,6 @@
     policy: deny
     direction: incoming
 
-- name: Move logrotate files to /etc/logrotate.d/
-  copy:
-    src: "files/logrotate_config/{{ item.file }}"
-    dest: "/etc/logrotate.d/{{ item.file }}"
-    mode: "0700"
-    owner: root
-  loop:
-    - { file: "logrotate-postgres-csv.conf" }
-    - { file: "logrotate-postgres.conf" }
-    - { file: "logrotate-walg.conf" }
-    - { file: "logrotate-postgres-auth.conf" }
-
 - name: Ensure default Postgres logrotate config is removed
   file:
     path: /etc/logrotate.d/postgresql-common
@@ -62,14 +50,6 @@
   copy:
     src: files/cron.deny
     dest: /etc/cron.deny
-
-- name: Configure logrotation to run every hour
-  shell:
-    cmd: |
-        cp  /usr/lib/systemd/system/logrotate.timer /etc/systemd/system/logrotate.timer
-        sed -i -e 's;daily;*:0/5;' /etc/systemd/system/logrotate.timer
-        systemctl reenable logrotate.timer
-  become: yes
 
 - name: import pgsodium_getkey script
   template:
