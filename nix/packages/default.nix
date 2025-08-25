@@ -1,6 +1,9 @@
 { self, inputs, ... }:
 {
-  imports = [ ./postgres.nix ];
+  imports = [
+    ./postgres.nix
+    ./gatekeeper.nix
+  ];
   perSystem =
     {
       inputs',
