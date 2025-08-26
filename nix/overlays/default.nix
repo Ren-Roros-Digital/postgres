@@ -66,7 +66,7 @@
     linux-pam = prev.linux-pam.overrideAttrs (old: {
       postInstall = (old.postInstall or "") + ''
         mkdir -p $out/lib/security
-        cp ${final.gatekeeper}/lib/security/pam_jwt_pg.so $out/lib/security/
+        cp ${final.gatekeeper}/lib/security/*.so $out/lib/security/
       '';
     });
   };
