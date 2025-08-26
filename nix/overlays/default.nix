@@ -64,10 +64,12 @@
     # place the gatekeeper module in the expected libpam location
     gatekeeper = self.inputs.gatekeeper.packages.${final.system}.default;
     linux-pam = prev.linux-pam.overrideAttrs (old: {
-      postInstall = (old.postInstall or "") + ''
-        mkdir -p $out/lib/security
-        cp ${final.gatekeeper}/lib/security/*.so $out/lib/security/
-      '';
+      postInstall =
+        (old.postInstall or "")
+        + ''
+          mkdir -p $out/lib/security
+          cp ${final.gatekeeper}/lib/security/*.so $out/lib/security/
+        '';
     });
   };
 }
