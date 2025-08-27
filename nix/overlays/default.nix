@@ -62,9 +62,7 @@
     };
 
     # place the gatekeeper module in the expected libpam location
-    gatekeeper = self.inputs.gatekeeper.packages.${final.system}.default.override {
-      go = self.inputs.nixpkgs-go124.legacyPackages.${final.system}.go_1_24;
-    };
+    gatekeeper = self.packages.${final.system}.gatekeeper;
     linux-pam = prev.linux-pam.overrideAttrs (old: {
       postInstall =
         (old.postInstall or "")
