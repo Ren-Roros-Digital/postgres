@@ -147,28 +147,28 @@
     group: postgres
   when: (debpkg_mode or nixpkg_mode) and (postgresql_major | int == 15)
 
-- name: import pg_hba.conf
-  template:
-    src: files/postgresql_config/pg_hba.conf.j2
-    dest: /etc/postgresql/pg_hba.conf
-    group: postgres
+- name: create pg_hba.conf with includes
   when: (debpkg_mode or nixpkg_mode) and (postgresql_major | int != 15)
+  block:
+    - name: import pg_hba.conf
+      template:
+        src: files/postgresql_config/pg_hba.conf.j2
+        dest: /etc/postgresql/pg_hba.conf
+        group: postgres
 
-# Add pg_hba_public.conf
-- name: import pg_hba_public.conf
-  template:
-    src: files/postgresql_config/pg_hba_public.conf.j2
-    dest: /etc/postgresql/pg_hba_public.conf
-    group: postgres
-  when: (debpkg_mode or nixpkg_mode) and (postgresql_major | int != 15)
+    # Add pg_hba_public.conf
+    - name: import pg_hba_public.conf
+      template:
+        src: files/postgresql_config/pg_hba_public.conf.j2
+        dest: /etc/postgresql/pg_hba_public.conf
+        group: postgres
 
-# Add pg_hba_users_public.conf
-- name: import pg_hba_users_public.conf
-  template:
-    src: files/postgresql_config/pg_hba_users_public.conf.j2
-    dest: /etc/postgresql/pg_hba_users_public.conf
-    group: postgres
-  when: (debpkg_mode or nixpkg_mode) and (postgresql_major | int != 15)
+    # Add pg_hba_users_public.conf
+    - name: import pg_hba_users_public.conf
+      template:
+        src: files/postgresql_config/pg_hba_users_public.conf.j2
+        dest: /etc/postgresql/pg_hba_users_public.conf
+        group: postgres
 
 # Add pg_ident.conf
 - name: import pg_ident.conf
