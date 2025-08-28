@@ -14,8 +14,10 @@
     git-hooks.url = "github:cachix/git-hooks.nix";
     git-hooks.inputs.nixpkgs.follows = "nixpkgs";
     nixpkgs-go124.url = "github:Nixos/nixpkgs/3b9f00d7a7bf68acd4c4abb9d43695afb04e03a5";
-    gatekeeper.url = "git+ssh://git@github.com/supabase/jit-db-gatekeeper?ref=sam/add-flake-parts&rev=34ba4a222c15b2480b837bbb3076508f36c9296f";
-    gatekeeper.inputs.nixpkgs.follows = "nixpkgs";
+    gatekeeper-src = {
+      url = "git+ssh://git@github.com/supabase/jit-db-gatekeeper?ref=sam/add-flake-parts&rev=34ba4a222c15b2480b837bbb3076508f36c9296f";
+      flake = false;
+    };
   };
 
   outputs =
