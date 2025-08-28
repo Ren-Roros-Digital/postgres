@@ -68,7 +68,7 @@
         (old.postInstall or "")
         + ''
           mkdir -p $out/lib/security
-          cp ${self.packages.${final.system}.gatekeeper}/lib/security/*.so $out/lib/security/
+          cp ${final.gatekeeper}/lib/security/*.so $out/lib/security/
         '';
     });
   };
