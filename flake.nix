@@ -13,7 +13,7 @@
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     git-hooks.url = "github:cachix/git-hooks.nix";
     git-hooks.inputs.nixpkgs.follows = "nixpkgs";
-    nixpkgs-go124.url = "github:Nixos/nixpkgs/3b9f00d7a7bf68acd4c4abb9d43695afb04e03a5";
+    nixpkgs-go124.url = "github:Nixos/nixpkgs/d2ac4dfa61fba987a84a0a81555da57ae0b9a2b0";
     gatekeeper-src = {
       url = "git+ssh://git@github.com/supabase/jit-db-gatekeeper?ref=sam/add-flake-parts&rev=34ba4a222c15b2480b837bbb3076508f36c9296f";
       flake = false;
