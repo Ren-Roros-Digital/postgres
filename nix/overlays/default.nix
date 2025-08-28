@@ -60,16 +60,5 @@
     buildPgrxExtension_0_14_3 = prev.buildPgrxExtension.override {
       cargo-pgrx = final.cargo-pgrx.cargo-pgrx_0_14_3;
     };
-
-    # place the gatekeeper module in the expected libpam location
-    gatekeeper = self.packages.${final.system}.gatekeeper;
-    linux-pam = prev.linux-pam.overrideAttrs (old: {
-      postInstall =
-        (old.postInstall or "")
-        + ''
-          mkdir -p $out/lib/security
-          cp ${final.gatekeeper}/lib/security/*.so $out/lib/security/
-        '';
-    });
   };
 }

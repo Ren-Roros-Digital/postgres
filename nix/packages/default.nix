@@ -2,7 +2,7 @@
 {
   imports = [
     ./postgres.nix
-    ./gatekeeper.nix
+    # ./gatekeeper.nix
   ];
   perSystem =
     {
@@ -37,6 +37,7 @@
           cleanup-ami = pkgs.callPackage ./cleanup-ami.nix { };
           dbmate-tool = pkgs.callPackage ./dbmate-tool.nix { inherit (self.supabase) defaults; };
           docs = pkgs.callPackage ./docs.nix { };
+          gatekeeper = pkgs.callPackage ./gatekeeper.nix { inherit inputs pkgs; };
           supabase-groonga = pkgs.callPackage ./groonga { };
           http-mock-server = pkgs.callPackage ./http-mock-server.nix { };
           local-infra-bootstrap = pkgs.callPackage ./local-infra-bootstrap.nix { };
