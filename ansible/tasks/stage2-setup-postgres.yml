@@ -102,17 +102,17 @@
 - name: Install gatekeeper if not pg15
   when:
     - stage2_nix
-    - not is_pgsql_15
+    - not is_psql_15
   block:
-   - name: Install gatekeeper from nix binary cache
+    - name: Install gatekeeper from nix binary cache
       become: yes
       shell: |
         sudo -u postgres bash -c ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix profile install github:supabase/postgres/{{ git_commit_sha }}#gatekeeper"
 
     - name: Create symbolic link for linux-pam to find pam_jit_pg.so
-      shell: >
-        sudo ln -s /var/lib/postgresql/.nix-profile/lib/security/pam_jit_pg.so $(find /nix/store -type d -path "/nix/store/*-linux-pam-*/lib/security" -print -quit)/pam_jit_pg.so
       become: yes
+      shell: |
+        sudo ln -s /var/lib/postgresql/.nix-profile/lib/security/pam_jit_pg.so $(find /nix/store -type d -path "/nix/store/*-linux-pam-*/lib/security" -print -quit)/pam_jit_pg.so
 
 - name: Set ownership and permissions for /etc/ssl/private
   become: yes
