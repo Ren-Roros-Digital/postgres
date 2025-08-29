@@ -197,13 +197,11 @@
 
 - name: create placeholder pam config
   file:
-    path: '/etc/pam.d/{{ item }}'
+    path: '/etc/pam.d/postgresql'
     state: touch
     owner: postgres
     group: postgres
     mode: 0664
-  with_items:
-    - 'postgresql'
   when: (debpkg_mode or nixpkg_mode) and not is_psql_15
 
 # Add pg_hba.conf
