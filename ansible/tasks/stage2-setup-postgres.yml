@@ -109,7 +109,7 @@
 
     - name: Create symbolic link for linux-pam to find pam_jit_pg.so
       shell: >
-        sudo ln -s /var/lib/postgresql/.nix-profile/lib/security/pam_jit_pg.so $(find /nix/store -type d -path "/nix/store/*-linux-pam-*/lib/security" -print -quit)/pam_jit_pg.s
+        sudo ln -s /var/lib/postgresql/.nix-profile/lib/security/pam_jit_pg.so $(find /nix/store -type d -path "/nix/store/*-linux-pam-*/lib/security" -print -quit)/pam_jit_pg.so
       become: yes
       when: stage2_nix and not is_psql_15
 
