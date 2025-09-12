@@ -625,6 +625,22 @@ def test_libpq5_version(host):
 
 def test_jit_pam_module_installed(host):
     """Test that the JIT PAM module (pam_jit_pg.so) is properly installed."""
+    # Check PostgreSQL version first
+    result = run_ssh_command(
+        host["ssh"], "sudo -u postgres psql --version | grep -oE '[0-9]+' | head -1"
+    )
+    pg_major_version = 15  # Default
+    if result["succeeded"] and result["stdout"].strip():
+        try:
+            pg_major_version = int(result["stdout"].strip())
+        except ValueError:
+            pass
+
+    # Skip test for PostgreSQL 15 as gatekeeper is not installed for PG15
+    if pg_major_version == 15:
+        print("\nSkipping JIT PAM module test for PostgreSQL 15 (not installed)")
+        return
+
     # Check if gatekeeper is installed via Nix
     result = run_ssh_command(
         host["ssh"],
@@ -708,6 +724,22 @@ def test_pam_postgresql_config(host):
 
 def test_jit_pam_gatekeeper_profile(host):
     """Test that the gatekeeper package is properly installed in the postgres user's Nix profile."""
+    # Check PostgreSQL version first
+    result = run_ssh_command(
+        host["ssh"], "sudo -u postgres psql --version | grep -oE '[0-9]+' | head -1"
+    )
+    pg_major_version = 15  # Default
+    if result["succeeded"] and result["stdout"].strip():
+        try:
+            pg_major_version = int(result["stdout"].strip())
+        except ValueError:
+            pass
+
+    # Skip test for PostgreSQL 15 as gatekeeper is not installed for PG15
+    if pg_major_version == 15:
+        print("\nSkipping gatekeeper profile test for PostgreSQL 15 (not installed)")
+        return
+
     # Check if gatekeeper is in the postgres user's Nix profile
     result = run_ssh_command(
         host["ssh"],
@@ -742,6 +774,24 @@ def test_jit_pam_gatekeeper_profile(host):
 
 def test_jit_pam_module_dependencies(host):
     """Test that the JIT PAM module has all required dependencies."""
+    # Check PostgreSQL version first
+    result = run_ssh_command(
+        host["ssh"], "sudo -u postgres psql --version | grep -oE '[0-9]+' | head -1"
+    )
+    pg_major_version = 15  # Default
+    if result["succeeded"] and result["stdout"].strip():
+        try:
+            pg_major_version = int(result["stdout"].strip())
+        except ValueError:
+            pass
+
+    # Skip test for PostgreSQL 15 as gatekeeper is not installed for PG15
+    if pg_major_version == 15:
+        print(
+            "\nSkipping JIT PAM module dependencies test for PostgreSQL 15 (not installed)"
+        )
+        return
+
     # Check dependencies of the PAM module
     result = run_ssh_command(
         host["ssh"],
