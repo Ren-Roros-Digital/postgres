@@ -403,9 +403,9 @@ users:
 def test_postgrest_is_running(host):
     """Check if postgrest service is running using our SSH connection."""
     result = run_ssh_command(host["ssh"], "systemctl is-active postgrest")
-    assert (
-        result["succeeded"] and result["stdout"].strip() == "active"
-    ), "PostgREST service is not running"
+    assert result["succeeded"] and result["stdout"].strip() == "active", (
+        "PostgREST service is not running"
+    )
 
 
 def test_postgrest_responds_to_requests(host):
@@ -547,9 +547,9 @@ def test_postgresql_version(host):
         if version_match:
             major_version = int(version_match.group(1))
             print(f"PostgreSQL major version: {major_version}")
-            assert (
-                major_version >= 14
-            ), f"PostgreSQL version {major_version} is less than 14"
+            assert major_version >= 14, (
+                f"PostgreSQL version {major_version} is less than 14"
+            )
         else:
             assert False, "Could not parse PostgreSQL version number"
     else:
@@ -579,9 +579,9 @@ def test_libpq5_version(host):
         if version_match:
             major_version = int(version_match.group(1))
             print(f"libpq5 major version: {major_version}")
-            assert (
-                major_version >= 14
-            ), f"libpq5 version {major_version} is less than 14"
+            assert major_version >= 14, (
+                f"libpq5 version {major_version} is less than 14"
+            )
         else:
             print("Could not parse libpq5 version from dpkg output")
     else:
@@ -614,9 +614,9 @@ def test_libpq5_version(host):
         if version_match:
             major_version = int(version_match.group(1))
             print(f"psql/libpq major version: {major_version}")
-            assert (
-                major_version >= 14
-            ), f"psql/libpq version {major_version} is less than 14"
+            assert major_version >= 14, (
+                f"psql/libpq version {major_version} is less than 14"
+            )
         else:
             print("Could not parse psql version")
 
@@ -706,9 +706,9 @@ def test_pam_postgresql_config(host):
                 perms = result["stdout"].strip()
                 print(f"PAM config permissions: {perms}")
                 # Should be owned by postgres:postgres with 664 permissions
-                assert (
-                    "postgres postgres" in perms
-                ), "PAM config not owned by postgres:postgres"
+                assert "postgres postgres" in perms, (
+                    "PAM config not owned by postgres:postgres"
+                )
         else:
             print("\nPAM config file not found")
             assert False, "PAM configuration file /etc/pam.d/postgresql not found"
@@ -743,7 +743,7 @@ def test_jit_pam_gatekeeper_profile(host):
     # Check if gatekeeper is in the postgres user's Nix profile
     result = run_ssh_command(
         host["ssh"],
-        "sudo -u postgres nix profile list 2>/dev/null | grep -i gatekeeper",
+        "sudo -u postgres nix profile list --json | jq -r '.elements.gatekeeper.storePaths[0]'",
     )
     if result["succeeded"] and result["stdout"].strip():
         print(f"\nGatekeeper found in Nix profile:\n{result['stdout']}")
@@ -998,7 +998,9 @@ def test_postgrest_read_only_session_attrs(host):
             print(
                 f"\nFound 'session is not read-only' errors in PostgREST logs:\n{result['stdout']}"
             )
-            assert False, "PostgREST logs contain 'session is not read-only' errors even though PostgreSQL is configured for read-only mode"
+            assert False, (
+                "PostgREST logs contain 'session is not read-only' errors even though PostgreSQL is configured for read-only mode"
+            )
         else:
             print("\nNo 'session is not read-only' errors found in PostgREST logs")
 

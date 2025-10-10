@@ -18,7 +18,7 @@ buildGoModule {
   src = pkgs.fetchFromGitHub {
     owner = "supabase";
     repo = "jit-db-gatekeeper";
-    rev = "refs/heads/main";
+    rev = "v1.0.0";
     hash = "sha256-hrYh1dBxk+aN3b/J9mZqk/ZXHmWA/MIqZLVgICT7e90=";
   };
 

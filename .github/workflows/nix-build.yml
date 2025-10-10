@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: blacksmith-32vcpu-ubuntu-2404	
+          - runner: blacksmith-32vcpu-ubuntu-2404
             arch: amd64
           - runner: blacksmith-32vcpu-ubuntu-2404-arm
             arch: arm64
@@ -56,12 +56,6 @@ jobs:
           sudo -E python -c "import os; file = open('/etc/nix/nix-secret-key', 'w'); file.write(os.environ['NIX_SIGN_SECRET_KEY']); file.close()"
         env:
           NIX_SIGN_SECRET_KEY: ${{ secrets.NIX_SIGN_SECRET_KEY }}
-      - name: Setup SSH for deploy key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.GK_DEPLOY_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
       - name: Setup cache script
         if: ${{ github.secret_source == 'Actions' }}
         run: |
@@ -116,7 +110,7 @@ jobs:
           df -h
       - name: Build psql bundle
         run: >
-          nix run "github:Mic92/nix-fast-build?rev=b1dae483ab7d4139a6297e02b6de9e5d30e43d48" 
+          nix run "github:Mic92/nix-fast-build?rev=b1dae483ab7d4139a6297e02b6de9e5d30e43d48"
           -- --skip-cached --no-nom ${{ matrix.runner == 'macos-latest-xlarge' && '--max-jobs 1' || '' }}
           --flake ".#checks.$(nix eval --raw --impure --expr 'builtins.currentSystem')"
         env:
