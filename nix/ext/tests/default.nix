@@ -224,6 +224,7 @@ builtins.listToAttrs (
       "pg_stat_monitor"
       "pg_tle"
       "pgaudit"
+      "pgtap"
       "vector"
       "wal2json"
       "wrappers"
