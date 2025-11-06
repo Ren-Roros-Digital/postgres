@@ -236,6 +236,7 @@ builtins.listToAttrs (
       "pg_stat_monitor"
       "pg_tle"
       "pgaudit"
+      "postgis"
       "vector"
       "wal2json"
       "wrappers"
