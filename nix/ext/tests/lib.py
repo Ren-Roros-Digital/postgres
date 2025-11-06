@@ -47,7 +47,7 @@ class PostgresExtensionTest(object):
         ).strip()
 
     def drop_extension(self):
-        self.run_sql(f"DROP EXTENSION IF EXISTS {self.extension_name};")
+        self.run_sql(f"DROP EXTENSION IF EXISTS {self.extension_name} CASCADE;")
 
     def install_extension(self, version: str):
         self.run_sql(

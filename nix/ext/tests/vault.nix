@@ -133,9 +133,6 @@ self.inputs.nixpkgs.lib.nixos.runTest {
     };
   testScript =
     { nodes, ... }:
-    let
-      pg17-configuration = "${nodes.server.system.build.toplevel}/specialisation/postgresql17";
-    in
     ''
       from pathlib import Path
       versions = {
@@ -143,8 +140,10 @@ self.inputs.nixpkgs.lib.nixos.runTest {
         "17": [${lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "17"))}],
       }
       extension_name = "${pname}"
+      system = "${nodes.server.system.build.toplevel}"
+      pg15_configuration = system
+      pg17_configuration = f"{system}/specialisation/postgresql17"
       support_upgrade = True
-      pg17_configuration = "${pg17-configuration}"
       ext_has_background_worker = ${
         if (installedExtension "15") ? hasBackgroundWorker then "True" else "False"
       }
@@ -197,5 +196,33 @@ self.inputs.nixpkgs.lib.nixos.runTest {
       with subtest("Check pg_regress with postgresql 17 after installing the last version"):
         test.run_sql_file("${../../../ansible/files/postgresql_extension_custom_scripts/supabase_vault/after-create.sql}")
         test.check_pg_regress(Path("${psql_17}/lib/pgxs/src/test/regress/pg_regress"), "17", pg_regress_test_name)
+
+      with subtest("Test pg_upgrade from postgresql 15 to 17 with older extension version"):
+        # Test that all extension versions from postgresql 15 can be upgraded to postgresql 17 using pg_upgrade
+        for version in versions["15"]:
+          server.systemctl("stop postgresql.service")
+          server.succeed("rm -fr /var/lib/postgresql/update_extensions.sql /var/lib/postgresql/17")
+          server.succeed(
+            f"{pg15_configuration}/bin/switch-to-configuration test >&2"
+          )
+          test.drop_extension()
+          test.install_extension(version)
+          server.succeed(
+            f"{pg17_configuration}/bin/switch-to-configuration test >&2"
+          )
+          has_update_script = server.succeed(
+            "test -f /var/lib/postgresql/update_extensions.sql && echo 'yes' || echo 'no'"
+          ).strip() == "yes"
+          if has_update_script:
+            # Run the extension update script generated during the upgrade
+            test.run_sql_file("/var/lib/postgresql/update_extensions.sql")
+            # If there was an update script, the last version should be installed
+            test.assert_version_matches(versions["17"][-1])
+          else:
+            # Otherwise, the version should match the version from postgresql 15
+            test.assert_version_matches(version)
+
+          test.run_sql_file("${../../../ansible/files/postgresql_extension_custom_scripts/supabase_vault/after-create.sql}")
+          test.check_pg_regress(Path("${psql_17}/lib/pgxs/src/test/regress/pg_regress"), "17", pg_regress_test_name)
     '';
 }
