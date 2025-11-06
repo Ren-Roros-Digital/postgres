@@ -49,16 +49,6 @@ let
       # update the following array when the pg_jsonschema version is updated
       # required to ensure that extensions update scripts from previous versions are generated
 
-      previousVersions = [
-        "0.3.1"
-        "0.3.0"
-        "0.2.0"
-        "0.1.4"
-        "0.1.3"
-        "0.1.2"
-        "0.1.1"
-        "0.1.0"
-      ];
       CARGO = "${cargo}/bin/cargo";
       #darwin env needs PGPORT to be unique for build to not clash with other pgrx extensions
       env = lib.optionalAttrs stdenv.isDarwin {
@@ -79,19 +69,15 @@ let
 
       preCheck = ''
         export PGRX_HOME=$(mktemp -d)
-        export NIX_PGLIBDIR=$PGRX_HOME/${lib.versions.major postgresql.version}/lib
-        ${lib.getExe pkgs.rsync} --chmod=ugo+w -a ${postgresql}/ ${postgresql.lib}/ $PGRX_HOME/${lib.versions.major postgresql.version}/
-        cargo pgrx init --pg${lib.versions.major postgresql.version} $PGRX_HOME/${lib.versions.major postgresql.version}/bin/pg_config
+        export NIX_PGLIBDIR=$PGRX_HOME/${pgVersion}/lib
+        ${lib.getExe pkgs.rsync} --chmod=ugo+w -a ${postgresql}/ ${postgresql.lib}/ $PGRX_HOME/${pgVersion}/
+        cargo pgrx init --pg${pgVersion} $PGRX_HOME/${pgVersion}/bin/pg_config
       '';
 
       doCheck = true;
 
-      preBuild = ''
-        echo "Processing git tags..."
-        echo '${builtins.concatStringsSep "," previousVersions}' | sed 's/,/\n/g' > git_tags.txt
-      '';
-
       postInstall = ''
+        find $out
         mv $out/lib/${pname}${postgresql.dlSuffix} $out/lib/${pname}-${version}${postgresql.dlSuffix}
 
         create_control_files() {
@@ -120,8 +106,9 @@ let
       };
     };
   allVersions = (builtins.fromJSON (builtins.readFile ../versions.json)).pg_jsonschema;
+  pgVersion = lib.versions.major postgresql.version;
   supportedVersions = lib.filterAttrs (
-    _: value: builtins.elem (lib.versions.major postgresql.version) value.postgresql
+    _: value: builtins.elem pgVersion value.postgresql
   ) allVersions;
   versions = lib.naturalSort (lib.attrNames supportedVersions);
   latestVersion = lib.last versions;
@@ -129,6 +116,8 @@ let
   packages = builtins.attrValues (
     lib.mapAttrs (name: value: build name value.hash value.rust value.pgrx) supportedVersions
   );
+  unsupportedVersionsItems = lib.filterAttrs (_: value: value.postgresql == [ "15" ]) allVersions;
+  unsupportedVersions = if pgVersion == "17" then lib.attrNames unsupportedVersionsItems else [ ];
 in
 (pkgs.buildEnv {
   name = pname;
@@ -144,6 +133,10 @@ in
          toString (numberOfVersions + 1)
        }"
     )
+
+    for v in ${lib.concatStringsSep " " unsupportedVersions}; do
+      cp $out/share/postgresql/extension/${pname}--${lib.head versions}.sql $out/share/postgresql/extension/${pname}--$v.sql
+    done
 
     create_sql_files() {
       PREVIOUS_VERSION=""
