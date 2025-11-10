@@ -35,38 +35,32 @@ let
       };
     in
     pkg;
+  testLib = import ./lib.nix {
+    inherit self pkgs;
+    testedExtensionName = pname;
+  };
   psql_15 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
 in
 self.inputs.nixpkgs.lib.nixos.runTest {
   name = "timescaledb";
   hostPkgs = pkgs;
   nodes.server =
-    { ... }:
-    {
-      services.postgresql = {
-        enable = true;
-        package = (postgresqlWithExtension psql_15);
-        authentication = ''
-          local all postgres peer map=postgres
-          local all all peer map=root
-        '';
-        identMap = ''
-          root root supabase_admin
-          postgres postgres postgres
-        '';
-        ensureUsers = [
-          {
-            name = "supabase_admin";
-            ensureClauses.superuser = true;
-          }
-          { name = "service_role"; }
-        ];
-
-        settings = {
-          shared_preload_libraries = "timescaledb";
+    { config, ... }:
+    lib.mkMerge [
+      (testLib.mkDefaultNixosTestNode {
+        inherit config psql_15;
+      })
+      {
+        services.postgresql = {
+          ensureUsers = [
+            { name = "service_role"; }
+          ];
+          settings = {
+            shared_preload_libraries = lib.mkForce "timescaledb";
+          };
         };
-      };
-    };
+      }
+    ];
   testScript =
     { ... }:
     ''

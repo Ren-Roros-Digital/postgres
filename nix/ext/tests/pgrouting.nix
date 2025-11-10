@@ -42,118 +42,67 @@ let
   pg_regress = pkgs.callPackage ../pg_regress.nix {
     postgresql = self.packages.${pkgs.system}.postgresql_15;
   };
+  testLib = import ./lib.nix {
+    inherit self pkgs;
+    testedExtensionName = pname;
+  };
+  psql_15 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
+  psql_17 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17;
 in
 self.inputs.nixpkgs.lib.nixos.runTest {
   name = pname;
   hostPkgs = pkgs;
   nodes.server =
     { config, ... }:
-    {
-      virtualisation = {
-        forwardPorts = [
-          {
-            from = "host";
-            host.port = 13022;
-            guest.port = 22;
-          }
-        ];
-      };
-      services.openssh = {
-        enable = true;
-      };
-      users.users.root.openssh.authorizedKeys.keys = [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIo+ulCUfJjnCVgfM4946Ih5Nm8DeZZiayYeABHGPEl7 jfroche"
-      ];
-
-      services.postgresql = {
-        enable = true;
-        package = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
-      };
-
-      specialisation.postgresql17.configuration = {
-        services.postgresql = {
-          package = lib.mkForce (postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17);
-        };
-
-        systemd.services.postgresql-migrate = {
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            User = "postgres";
-            Group = "postgres";
-            StateDirectory = "postgresql";
-            WorkingDirectory = "${builtins.dirOf config.services.postgresql.dataDir}";
-          };
-          script =
-            let
-              oldPostgresql = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
-              newPostgresql = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17;
-              oldDataDir = "${builtins.dirOf config.services.postgresql.dataDir}/${oldPostgresql.psqlSchema}";
-              newDataDir = "${builtins.dirOf config.services.postgresql.dataDir}/${newPostgresql.psqlSchema}";
-            in
-            ''
-              if [[ ! -d ${newDataDir} ]]; then
-                install -d -m 0700 -o postgres -g postgres "${newDataDir}"
-                ${newPostgresql}/bin/initdb -D "${newDataDir}"
-                ${newPostgresql}/bin/pg_upgrade --old-datadir "${oldDataDir}" --new-datadir "${newDataDir}" \
-                  --old-bindir "${oldPostgresql}/bin" --new-bindir "${newPostgresql}/bin"
-              else
-                echo "${newDataDir} already exists"
-              fi
+    lib.mkMerge [
+      (testLib.mkDefaultNixosTestNode { inherit config psql_15 psql_17; })
+      {
+        specialisation.orioledb17.configuration = {
+          services.postgresql = {
+            package = lib.mkForce (postgresqlWithExtension self.packages.${pkgs.system}.postgresql_orioledb-17);
+            settings = {
+              shared_preload_libraries = "orioledb";
+              default_table_access_method = "orioledb";
+            };
+            initdbArgs = [
+              "--allow-group-access"
+              "--locale-provider=icu"
+              "--encoding=UTF-8"
+              "--icu-locale=en_US.UTF-8"
+            ];
+            initialScript = pkgs.writeText "init-postgres-with-orioledb" ''
+              CREATE EXTENSION orioledb CASCADE;
             '';
-        };
-
-        systemd.services.postgresql = {
-          after = [ "postgresql-migrate.service" ];
-          requires = [ "postgresql-migrate.service" ];
-        };
-      };
-
-      specialisation.orioledb17.configuration = {
-        services.postgresql = {
-          package = lib.mkForce (postgresqlWithExtension self.packages.${pkgs.system}.postgresql_orioledb-17);
-          settings = {
-            shared_preload_libraries = "orioledb";
-            default_table_access_method = "orioledb";
           };
-          initdbArgs = [
-            "--allow-group-access"
-            "--locale-provider=icu"
-            "--encoding=UTF-8"
-            "--icu-locale=en_US.UTF-8"
-          ];
-          initialScript = pkgs.writeText "init-postgres-with-orioledb" ''
-            CREATE EXTENSION orioledb CASCADE;
-          '';
-        };
 
-        systemd.services.postgresql-migrate = {
-          # we don't support migrating from postgresql 17 to orioledb-17 so we just reinit the datadir
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            User = "postgres";
-            Group = "postgres";
-            StateDirectory = "postgresql";
-            WorkingDirectory = "${builtins.dirOf config.services.postgresql.dataDir}";
+          systemd.services.postgresql-migrate = {
+            # we don't support migrating from postgresql 17 to orioledb-17 so we just reinit the datadir
+            serviceConfig = {
+              Type = "oneshot";
+              RemainAfterExit = true;
+              User = "postgres";
+              Group = "postgres";
+              StateDirectory = "postgresql";
+              WorkingDirectory = "${builtins.dirOf config.services.postgresql.dataDir}";
+            };
+            script =
+              let
+                newPostgresql = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_orioledb-17;
+              in
+              ''
+                set -x
+                systemctl cat postgresql.service
+                rm -rf ${builtins.dirOf config.services.postgresql.dataDir}/${newPostgresql.psqlSchema}
+              '';
           };
-          script =
-            let
-              newPostgresql = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_orioledb-17;
-            in
-            ''
-              set -x
-              systemctl cat postgresql.service
-              rm -rf ${builtins.dirOf config.services.postgresql.dataDir}/${newPostgresql.psqlSchema}
-            '';
-        };
 
-        systemd.services.postgresql = {
-          after = [ "postgresql-migrate.service" ];
-          requires = [ "postgresql-migrate.service" ];
+          systemd.services.postgresql = {
+            after = [ "postgresql-migrate.service" ];
+            requires = [ "postgresql-migrate.service" ];
+          };
         };
-      };
-    };
+      }
+    ];
   testScript =
     { nodes, ... }:
     let

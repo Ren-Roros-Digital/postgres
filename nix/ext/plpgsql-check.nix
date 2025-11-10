@@ -133,12 +133,6 @@ buildEnv {
     inherit versions numberOfVersions switch-ext-version;
     pname = "${pname}-all";
     hasBackgroundWorker = true;
-    defaultSettings = {
-      shared_preload_libraries = [
-        "plpgsql"
-        "plpgsql_check"
-      ];
-    };
     version =
       "multi-" + lib.concatStringsSep "-" (map (v: lib.replaceStrings [ "." ] [ "-" ] v) versions);
   };

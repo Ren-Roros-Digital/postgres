@@ -35,87 +35,17 @@ let
       };
     in
     pkg;
+  testLib = import ./lib.nix {
+    inherit self pkgs;
+    testedExtensionName = pname;
+  };
+  psql_15 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
+  psql_17 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17;
 in
 self.inputs.nixpkgs.lib.nixos.runTest {
   name = pname;
   hostPkgs = pkgs;
-  nodes.server =
-    { config, ... }:
-    {
-      virtualisation = {
-        forwardPorts = [
-          {
-            from = "host";
-            host.port = 13022;
-            guest.port = 22;
-          }
-        ];
-      };
-      services.openssh = {
-        enable = true;
-      };
-
-      services.postgresql = {
-        enable = true;
-        package = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
-        enableTCPIP = true;
-        authentication = ''
-          local all postgres peer map=postgres
-          local all all peer map=root
-        '';
-        identMap = ''
-          root root supabase_admin
-          postgres postgres postgres
-        '';
-        ensureUsers = [
-          {
-            name = "supabase_admin";
-            ensureClauses.superuser = true;
-          }
-        ];
-      };
-
-      networking.firewall.allowedTCPPorts = [ config.services.postgresql.settings.port ];
-
-      specialisation.postgresql17.configuration = {
-        services.postgresql = {
-          package = lib.mkForce (postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17);
-        };
-
-        systemd.services.postgresql-migrate = {
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            User = "postgres";
-            Group = "postgres";
-            StateDirectory = "postgresql";
-            WorkingDirectory = "${builtins.dirOf config.services.postgresql.dataDir}";
-          };
-          script =
-            let
-              oldPostgresql = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
-              newPostgresql = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17;
-              oldDataDir = "${builtins.dirOf config.services.postgresql.dataDir}/${oldPostgresql.psqlSchema}";
-              newDataDir = "${builtins.dirOf config.services.postgresql.dataDir}/${newPostgresql.psqlSchema}";
-            in
-            ''
-              if [[ ! -d ${newDataDir} ]]; then
-                install -d -m 0700 -o postgres -g postgres "${newDataDir}"
-                ${newPostgresql}/bin/initdb -D "${newDataDir}"
-                ${newPostgresql}/bin/pg_upgrade --old-datadir "${oldDataDir}" --new-datadir "${newDataDir}" \
-                  --old-bindir "${oldPostgresql}/bin" --new-bindir "${newPostgresql}/bin"
-              else
-                echo "${newDataDir} already exists"
-              fi
-            '';
-        };
-
-        systemd.services.postgresql = {
-          after = [ "postgresql-migrate.service" ];
-          requires = [ "postgresql-migrate.service" ];
-        };
-      };
-    };
+  nodes.server = { config, ... }: testLib.mkDefaultNixosTestNode { inherit config psql_15 psql_17; };
   testScript =
     { nodes, ... }:
     let

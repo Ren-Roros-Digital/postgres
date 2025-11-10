@@ -36,45 +36,19 @@ let
       };
     in
     pkg;
+  testLib = import ./lib.nix {
+    inherit self pkgs;
+    testedExtensionName = pname;
+  };
   psql_15 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
 in
 self.inputs.nixpkgs.lib.nixos.runTest {
   name = pname;
   hostPkgs = pkgs;
   nodes.server =
-    { ... }:
-    {
-      virtualisation = {
-        forwardPorts = [
-          {
-            from = "host";
-            host.port = 13022;
-            guest.port = 22;
-          }
-        ];
-      };
-      services.openssh = {
-        enable = true;
-      };
-
-      services.postgresql = {
-        enable = true;
-        package = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
-        authentication = ''
-          local all postgres peer map=postgres
-          local all all peer map=root
-        '';
-        identMap = ''
-          root root supabase_admin
-          postgres postgres postgres
-        '';
-        ensureUsers = [
-          {
-            name = "supabase_admin";
-            ensureClauses.superuser = true;
-          }
-        ];
-      };
+    { config, ... }:
+    testLib.mkDefaultNixosTestNode {
+      inherit config psql_15;
     };
   testScript =
     { ... }:
