@@ -9,44 +9,12 @@ let
     extension_name:
     let
       pname = extension_name;
-      inherit (pkgs) lib;
-      versions = postgresqlMajorVersion: (testLib.installedExtension postgresqlMajorVersion).versions;
-      postgresqlWithExtension =
-        postgresql:
-        let
-          majorVersion = lib.versions.major postgresql.version;
-          pkg = pkgs.buildEnv {
-            name = "postgresql-${majorVersion}-${pname}";
-            paths = [
-              postgresql
-              postgresql.lib
-              (testLib.installedExtension majorVersion)
-            ];
-            passthru = {
-              inherit (postgresql) version psqlSchema;
-              lib = pkg;
-              withPackages = _: pkg;
-            };
-            nativeBuildInputs = [ pkgs.makeWrapper ];
-            pathsToLink = [
-              "/"
-              "/bin"
-              "/lib"
-            ];
-            postBuild = ''
-              wrapProgram $out/bin/postgres --set NIX_PGLIBDIR $out/lib
-              wrapProgram $out/bin/pg_ctl --set NIX_PGLIBDIR $out/lib
-              wrapProgram $out/bin/pg_upgrade --set NIX_PGLIBDIR $out/lib
-            '';
-          };
-        in
-        pkg;
       testLib = import ./lib.nix {
         inherit self pkgs;
         testedExtensionName = extension_name;
       };
-      psql_15 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
-      psql_17 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17;
+      inherit (pkgs) lib;
+      inherit (testLib) versions psql_15 psql_17;
     in
     self.inputs.nixpkgs.lib.nixos.runTest {
       name = pname;

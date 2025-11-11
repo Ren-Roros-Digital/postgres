@@ -1,59 +1,31 @@
 { self, pkgs }:
 let
   pname = "supabase_vault";
-  inherit (pkgs) lib;
-  installedExtension =
-    postgresMajorVersion: self.packages.${pkgs.system}."psql_${postgresMajorVersion}/exts/${pname}-all";
-  versions = postgresqlMajorVersion: (installedExtension postgresqlMajorVersion).versions;
-  postgresqlWithExtension =
-    postgresql:
-    let
-      majorVersion = lib.versions.major postgresql.version;
-      pkg = pkgs.buildEnv {
-        name = "postgresql-${majorVersion}-${pname}";
-        paths = [
-          postgresql
-          postgresql.lib
-          (installedExtension majorVersion)
-          self.packages.${pkgs.system}."psql_${majorVersion}/exts/pgsodium-all" # dependency
-        ];
-        passthru = {
-          inherit (postgresql) version psqlSchema;
-          lib = pkg;
-          withPackages = _: pkg;
-        };
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        pathsToLink = [
-          "/"
-          "/bin"
-          "/lib"
-        ];
-        postBuild = ''
-          wrapProgram $out/bin/postgres --set NIX_PGLIBDIR $out/lib
-          wrapProgram $out/bin/pg_ctl --set NIX_PGLIBDIR $out/lib
-          wrapProgram $out/bin/pg_upgrade --set NIX_PGLIBDIR $out/lib
-        '';
-      };
-    in
-    pkg;
-  vaultGetKey = lib.getExe (
-    pkgs.writeShellScriptBin "vault-getkey" ''
-      echo 0000000000000000000000000000000000000000000000000000000000000000
-    ''
-  );
   testLib = import ./lib.nix {
     inherit self pkgs;
     testedExtensionName = pname;
   };
-  psql_15 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
-  psql_17 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17;
+  inherit (testLib) mkPostgresqlWithExtensions versions;
+  psql_15 = mkPostgresqlWithExtensions self.packages.${pkgs.system}.postgresql_15 [
+    pname
+    "pgsodium"
+  ];
+  psql_17 = mkPostgresqlWithExtensions self.packages.${pkgs.system}.postgresql_17 [
+    pname
+    "pgsodium"
+  ];
+  vaultGetKey = pkgs.lib.getExe (
+    pkgs.writeShellScriptBin "vault-getkey" ''
+      echo 0000000000000000000000000000000000000000000000000000000000000000
+    ''
+  );
 in
 self.inputs.nixpkgs.lib.nixos.runTest {
   name = pname;
   hostPkgs = pkgs;
   nodes.server =
     { config, ... }:
-    lib.mkMerge [
+    pkgs.lib.mkMerge [
       (testLib.mkDefaultNixosTestNode { inherit config psql_15 psql_17; })
       {
         services.postgresql = {
@@ -62,7 +34,7 @@ self.inputs.nixpkgs.lib.nixos.runTest {
           '';
           ensureUsers = [ { name = "service_role"; } ];
           settings = {
-            "shared_preload_libraries" = lib.mkForce "${pname},pgsodium";
+            "shared_preload_libraries" = pkgs.lib.mkForce "${pname},pgsodium";
             "pgsodium.getkey_script" = vaultGetKey;
             "vault.getkey_script" = vaultGetKey;
             "search_path" = "\"$user\", public, auth, extensions";
@@ -71,7 +43,7 @@ self.inputs.nixpkgs.lib.nixos.runTest {
 
         specialisation.postgresql17.configuration = {
           systemd.services.postgresql-migrate = {
-            script = lib.mkForce (
+            script = pkgs.lib.mkForce (
               let
                 oldPostgresql = psql_15;
                 newPostgresql = psql_17;
@@ -104,17 +76,17 @@ self.inputs.nixpkgs.lib.nixos.runTest {
     ''
       from pathlib import Path
       versions = {
-        "15": [${lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "15"))}],
-        "17": [${lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "17"))}],
+        "15": [${pkgs.lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "15"))}],
+        "17": [${pkgs.lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "17"))}],
       }
       extension_name = "${pname}"
       support_upgrade = True
       pg17_configuration = "${pg17-configuration}"
       ext_has_background_worker = ${
-        if (installedExtension "15") ? hasBackgroundWorker then "True" else "False"
+        if (testLib.installedExtension "15") ? hasBackgroundWorker then "True" else "False"
       }
       sql_test_directory = Path("${../../tests}")
-      pg_regress_test_name = "${(installedExtension "15").pgRegressTestName or pname}"
+      pg_regress_test_name = "${(testLib.installedExtension "15").pgRegressTestName or pname}"
 
       ${builtins.readFile ./lib.py}
 

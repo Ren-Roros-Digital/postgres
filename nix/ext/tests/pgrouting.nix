@@ -1,44 +1,6 @@
 { self, pkgs }:
 let
   pname = "pgrouting";
-  inherit (pkgs) lib;
-  installedExtension =
-    postgresMajorVersion: self.packages.${pkgs.system}."psql_${postgresMajorVersion}/exts/${pname}-all";
-  versions = postgresqlMajorVersion: (installedExtension postgresqlMajorVersion).versions;
-  postgresqlWithExtension =
-    postgresql:
-    let
-      majorVersion = lib.versions.major postgresql.version;
-      pkg = pkgs.buildEnv {
-        name = "postgresql-${majorVersion}-${pname}";
-        paths =
-          [
-            postgresql
-            postgresql.lib
-            (installedExtension majorVersion)
-            self.packages.${pkgs.system}."psql_${majorVersion}/exts/postgis-all"
-          ]
-          ++ lib.optional (postgresql.isOrioleDB
-          ) self.packages.${pkgs.system}."psql_orioledb-17/exts/orioledb";
-        passthru = {
-          inherit (postgresql) version psqlSchema;
-          lib = pkg;
-          withPackages = _: pkg;
-        };
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        pathsToLink = [
-          "/"
-          "/bin"
-          "/lib"
-        ];
-        postBuild = ''
-          wrapProgram $out/bin/postgres --set NIX_PGLIBDIR $out/lib
-          wrapProgram $out/bin/pg_ctl --set NIX_PGLIBDIR $out/lib
-          wrapProgram $out/bin/pg_upgrade --set NIX_PGLIBDIR $out/lib
-        '';
-      };
-    in
-    pkg;
   pg_regress = pkgs.callPackage ../pg_regress.nix {
     postgresql = self.packages.${pkgs.system}.postgresql_15;
   };
@@ -46,20 +8,31 @@ let
     inherit self pkgs;
     testedExtensionName = pname;
   };
-  psql_15 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
-  psql_17 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17;
+  inherit (testLib) mkPostgresqlWithExtensions versions;
+  psql_15 = mkPostgresqlWithExtensions self.packages.${pkgs.system}.postgresql_15 [
+    pname
+    "postgis"
+  ];
+  psql_17 = mkPostgresqlWithExtensions self.packages.${pkgs.system}.postgresql_17 [
+    pname
+    "postgis"
+  ];
+  psql_orioledb_17 = mkPostgresqlWithExtensions self.packages.${pkgs.system}.postgresql_orioledb-17 [
+    pname
+    "postgis"
+  ];
 in
 self.inputs.nixpkgs.lib.nixos.runTest {
   name = pname;
   hostPkgs = pkgs;
   nodes.server =
     { config, ... }:
-    lib.mkMerge [
+    pkgs.lib.mkMerge [
       (testLib.mkDefaultNixosTestNode { inherit config psql_15 psql_17; })
       {
         specialisation.orioledb17.configuration = {
           services.postgresql = {
-            package = lib.mkForce (postgresqlWithExtension self.packages.${pkgs.system}.postgresql_orioledb-17);
+            package = pkgs.lib.mkForce psql_orioledb_17;
             settings = {
               shared_preload_libraries = "orioledb";
               default_table_access_method = "orioledb";
@@ -87,7 +60,7 @@ self.inputs.nixpkgs.lib.nixos.runTest {
             };
             script =
               let
-                newPostgresql = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_orioledb-17;
+                newPostgresql = psql_orioledb_17;
               in
               ''
                 set -x
@@ -111,9 +84,9 @@ self.inputs.nixpkgs.lib.nixos.runTest {
     in
     ''
       versions = {
-        "15": [${lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "15"))}],
-        "17": [${lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "17"))}],
-        "orioledb-17": [${lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "orioledb-17"))}],
+        "15": [${pkgs.lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "15"))}],
+        "17": [${pkgs.lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "17"))}],
+        "orioledb-17": [${pkgs.lib.concatStringsSep ", " (map (s: ''"${s}"'') (versions "orioledb-17"))}],
       }
 
       def run_sql(query):

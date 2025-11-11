@@ -1,46 +1,11 @@
 { self, pkgs }:
 let
   pname = "http";
-  inherit (pkgs) lib;
-  installedExtension =
-    postgresMajorVersion: self.packages.${pkgs.system}."psql_${postgresMajorVersion}/exts/${pname}-all";
-  versions = postgresqlMajorVersion: (installedExtension postgresqlMajorVersion).versions;
-  postgresqlWithExtension =
-    postgresql:
-    let
-      majorVersion = lib.versions.major postgresql.version;
-      pkg = pkgs.buildEnv {
-        name = "postgresql-${majorVersion}-${pname}";
-        paths = [
-          postgresql
-          postgresql.lib
-          (installedExtension majorVersion)
-        ];
-        passthru = {
-          inherit (postgresql) version psqlSchema;
-          lib = pkg;
-          withPackages = _: pkg;
-        };
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        pathsToLink = [
-          "/"
-          "/bin"
-          "/lib"
-        ];
-        postBuild = ''
-          wrapProgram $out/bin/postgres --set NIX_PGLIBDIR $out/lib
-          wrapProgram $out/bin/pg_ctl --set NIX_PGLIBDIR $out/lib
-          wrapProgram $out/bin/pg_upgrade --set NIX_PGLIBDIR $out/lib
-        '';
-      };
-    in
-    pkg;
   testLib = import ./lib.nix {
     inherit self pkgs;
     testedExtensionName = pname;
   };
-  psql_15 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
-  psql_17 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_17;
+  inherit (testLib) versions psql_15 psql_17;
 in
 self.inputs.nixpkgs.lib.nixos.runTest {
   name = pname;
@@ -51,12 +16,12 @@ self.inputs.nixpkgs.lib.nixos.runTest {
     let
       pg17-configuration = "${nodes.server.system.build.toplevel}/specialisation/postgresql17";
       # Convert versions to major.minor format (e.g., "1.5.0" -> "1.5")
-      toMajorMinor = map (v: lib.versions.majorMinor v);
+      toMajorMinor = map (v: pkgs.lib.versions.majorMinor v);
     in
     ''
       versions = {
-        "15": [${lib.concatStringsSep ", " (map (s: ''"${s}"'') (toMajorMinor (versions "15")))}],
-        "17": [${lib.concatStringsSep ", " (map (s: ''"${s}"'') (toMajorMinor (versions "17")))}],
+        "15": [${pkgs.lib.concatStringsSep ", " (map (s: ''"${s}"'') (toMajorMinor (versions "15")))}],
+        "17": [${pkgs.lib.concatStringsSep ", " (map (s: ''"${s}"'') (toMajorMinor (versions "17")))}],
       }
 
       def run_sql(query):

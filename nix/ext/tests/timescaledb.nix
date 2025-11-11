@@ -1,62 +1,25 @@
 { self, pkgs }:
 let
   pname = "timescaledb";
-  inherit (pkgs) lib;
-  installedExtension =
-    postgresMajorVersion: self.packages.${pkgs.system}."psql_${postgresMajorVersion}/exts/${pname}-all";
-  versions = (installedExtension "15").versions;
-  postgresqlWithExtension =
-    postgresql:
-    let
-      majorVersion = lib.versions.major postgresql.version;
-      pkg = pkgs.buildEnv {
-        name = "postgresql-${majorVersion}-${pname}";
-        paths = [
-          postgresql
-          postgresql.lib
-          (installedExtension majorVersion)
-        ];
-        passthru = {
-          inherit (postgresql) version psqlSchema;
-          lib = pkg;
-          withPackages = _: pkg;
-        };
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        pathsToLink = [
-          "/"
-          "/bin"
-          "/lib"
-        ];
-        postBuild = ''
-          wrapProgram $out/bin/postgres --set NIX_PGLIBDIR $out/lib
-          wrapProgram $out/bin/pg_ctl --set NIX_PGLIBDIR $out/lib
-          wrapProgram $out/bin/pg_upgrade --set NIX_PGLIBDIR $out/lib
-        '';
-      };
-    in
-    pkg;
   testLib = import ./lib.nix {
     inherit self pkgs;
     testedExtensionName = pname;
   };
-  psql_15 = postgresqlWithExtension self.packages.${pkgs.system}.postgresql_15;
+  inherit (testLib) psql_15;
+  versions = (testLib.installedExtension "15").versions;
 in
 self.inputs.nixpkgs.lib.nixos.runTest {
   name = "timescaledb";
   hostPkgs = pkgs;
   nodes.server =
     { config, ... }:
-    lib.mkMerge [
-      (testLib.mkDefaultNixosTestNode {
-        inherit config psql_15;
-      })
+    pkgs.lib.mkMerge [
+      (testLib.mkDefaultNixosTestNode { inherit config psql_15; })
       {
         services.postgresql = {
-          ensureUsers = [
-            { name = "service_role"; }
-          ];
+          ensureUsers = [ { name = "service_role"; } ];
           settings = {
-            shared_preload_libraries = lib.mkForce "timescaledb";
+            shared_preload_libraries = pkgs.lib.mkForce "timescaledb";
           };
         };
       }
@@ -72,7 +35,7 @@ self.inputs.nixpkgs.lib.nixos.runTest {
       server.wait_for_unit("postgresql.service")
 
       versions = {
-        "15": [${lib.concatStringsSep ", " (map (s: ''"${s}"'') versions)}],
+        "15": [${pkgs.lib.concatStringsSep ", " (map (s: ''"${s}"'') versions)}],
       }
       extension_name = "${pname}"
       support_upgrade = True
