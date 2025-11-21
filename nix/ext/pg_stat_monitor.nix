@@ -17,11 +17,16 @@ let
   ) allVersions;
 
   # Derived version information
-  versions = lib.naturalSort (lib.attrNames supportedVersions);
-  latestVersion = lib.last versions;
+  allVersionsList = lib.naturalSort (lib.attrNames supportedVersions);
+  versions = builtins.filter (v: (allVersions.${v}.pgUpgradeCompatible or true)) allVersionsList;
+  latestVersion = lib.last allVersionsList;
   numberOfVersions = builtins.length versions;
+  # Filter to only build pg_upgrade compatible versions
+  pgUpgradeCompatibleVersions = lib.filterAttrs (
+    name: _: allVersions.${name}.pgUpgradeCompatible or true
+  ) supportedVersions;
   packages = builtins.attrValues (
-    lib.mapAttrs (name: value: build name value.hash value.revision) supportedVersions
+    lib.mapAttrs (name: value: build name value.hash value.revision) pgUpgradeCompatibleVersions
   );
 
   # Build function for individual versions
