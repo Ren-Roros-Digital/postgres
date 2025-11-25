@@ -11,15 +11,14 @@ let
       majorVersion = lib.versions.major postgresql.version;
       pkg = pkgs.buildEnv {
         name = "postgresql-${majorVersion}-${pname}";
-        paths =
-          [
-            postgresql
-            postgresql.lib
-            (installedExtension majorVersion)
-            self.packages.${pkgs.system}."psql_${majorVersion}/exts/postgis-all"
-          ]
-          ++ lib.optional (postgresql.isOrioleDB
-          ) self.packages.${pkgs.system}."psql_orioledb-17/exts/orioledb";
+        paths = [
+          postgresql
+          postgresql.lib
+          (installedExtension majorVersion)
+          self.packages.${pkgs.system}."psql_${majorVersion}/exts/postgis-all"
+        ]
+        ++ lib.optional (postgresql.isOrioleDB
+        ) self.packages.${pkgs.system}."psql_orioledb-17/exts/orioledb";
         passthru = {
           inherit (postgresql) version psqlSchema;
           lib = pkg;
