@@ -17,16 +17,16 @@ let
 in
 buildPgrxExtension_0_12_9 rec {
   pname = "supabase-wrappers";
-  version = "0.4.5";
+  version = "0.4.6-renroros";
   # update the following array when the wrappers version is updated
   # required to ensure that extensions update scripts from previous versions are generated
-  previousVersions = ["0.4.4" "0.4.3" "0.4.2" "0.4.1" "0.4.0" "0.3.1" "0.3.0" "0.2.0" "0.1.19" "0.1.18" "0.1.17" "0.1.16" "0.1.15" "0.1.14" "0.1.12" "0.1.11" "0.1.10" "0.1.9" "0.1.8" "0.1.7" "0.1.6" "0.1.5" "0.1.4" "0.1.1" "0.1.0"];
+  previousVersions = ["0.4.5" "0.4.4" "0.4.3" "0.4.2" "0.4.1" "0.4.0" "0.3.1" "0.3.0" "0.2.0" "0.1.19" "0.1.18" "0.1.17" "0.1.16" "0.1.15" "0.1.14" "0.1.12" "0.1.11" "0.1.10" "0.1.9" "0.1.8" "0.1.7" "0.1.6" "0.1.5" "0.1.4" "0.1.1" "0.1.0"];
   inherit postgresql;
   src = fetchFromGitHub {
-    owner = "supabase";
+    owner = "ren-roros-digital";
     repo = "wrappers";
     rev = "v${version}";
-    hash = "sha256-IgDfVFROMCHYLZ/Iqj12MsQjPPCdRoH+3oi3Ki/iaRI=";
+    hash = "sha256-SGk9CnMkO4VvwRsiUtim9wqMV6/LS2zwbGHyn8SLA+M=";
   };
  
   nativeBuildInputs = [ pkg-config cargo git ];
