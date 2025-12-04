@@ -26,7 +26,7 @@ buildPgrxExtension_0_12_9 rec {
     owner = "ren-roros-digital";
     repo = "wrappers";
     rev = "${version}";
-    hash = "sha256-WDeM3UhezvvuZFHpR4/QCIu33dduj8YXG/pzWPbTB2Q=";
+    hash = "sha256-DAB8p1fgeDfZ92rdzgoLgb8NjR1sRGhUJch8+J5C52A=";
   };
  
   nativeBuildInputs = [ pkg-config cargo git ];
